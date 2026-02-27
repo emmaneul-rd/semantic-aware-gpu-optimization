@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+type: software
+title: "Semantic-Aware GPU Optimization Framework"
+authors:
+  - family-names: "Sánchez Pache"
+    given-names: "Emmanuel"
+    email: "emmanuel@salomoncoral.com"
+    affiliation: "Nodo Cero Research Division"
+version: "1.0.0"
+date-released: "2026-02-27"
+repository-code: "https://github.com/emmaneul-rd/semantic-aware-gpu-optimization"
+url: "https://zenodo.org/records/18765024"
+doi: "10.5281/zenodo.18765024"
+license: "Apache-2.0"
+keywords:
+  - GPU optimization
+  - semantic awareness
+  - cache locality
+  - transformer inference
+  - energy efficiency
+abstract: "A compiler-level paradigm for GPU memory optimization achieving 82.31% energy reduction through semantic awareness of data access patterns."
+message: "If you use this software, please cite it using the metadata from this file."
+preferred-citation:
+  type: software
+  authors:
+    - family-names: "Sánchez Pache"
+      given-names: "Emmanuel"
+  title: "Semantic-Aware GPU Optimization Framework"
+  year: 2026
+  doi: "10.5281/zenodo.18765024"
+  url: "https://zenodo.org/records/18765024"
+  repository-code: "https://github.com/emmaneul-rd/semantic-aware-gpu-optimization"

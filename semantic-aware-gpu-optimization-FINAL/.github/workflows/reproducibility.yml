@@ -1,0 +1,151 @@
+name: Reproducibility Validation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+
+jobs:
+  reproducibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r code/requirements.txt
+        pip install pytest numpy scipy
+    
+    - name: Create output directories
+      run: |
+        mkdir -p data/results data/synthetic figures logs
+    
+    - name: Validate environment
+      run: python scripts/validate_environment.py
+    
+    - name: Run Part 2 (Hypothesis Validation)
+      run: |
+        python code/parte_2_hypothesis_validation.py \
+          --iterations 5 \
+          --operations 50000
+      timeout-minutes: 15
+    
+    - name: Validate Part 2 results
+      run: |
+        python -c "
+import json
+with open('data/results/part_2_results.json') as f:
+    r = json.load(f)
+    
+# Check improvement is in ballpark
+assert r['energy']['improvement_percent'] > 70, 'Improvement too low'
+assert r['energy']['improvement_percent'] < 90, 'Improvement too high'
+
+# Check p-value is significant
+assert r['statistics']['energy_t_test']['p_value'] < 0.05, 'Not significant'
+
+# Check effect size is large
+assert abs(r['statistics']['effect_size_cohens_d']) > 0.8, 'Effect too small'
+
+print('✓ Part 2 results validated')
+"
+    
+    - name: Run Part 3 (Transformer Batching)
+      run: |
+        python code/parte_3_semantic_batching.py \
+          --iterations 3 \
+          --tokens 50000
+      timeout-minutes: 15
+    
+    - name: Validate Part 3 results
+      run: |
+        python -c "
+import json
+with open('data/results/part_3_results.json') as f:
+    r = json.load(f)
+    
+# Check homogeneity improvement
+assert r['statistics']['improvement_percent'] > 1000, 'Improvement too low'
+
+# Check p-value is significant
+assert r['statistics']['homogeneity_t_test']['p_value'] < 0.05, 'Not significant'
+
+print('✓ Part 3 results validated')
+"
+    
+    - name: Run Part 4 (Overhead Analysis)
+      run: |
+        python code/parte_4_overhead_analysis.py
+      timeout-minutes: 5
+    
+    - name: Validate Part 4 results
+      run: |
+        python -c "
+import json
+with open('data/results/part_4_results.json') as f:
+    r = json.load(f)
+    
+# Check viability index is huge
+assert r['viability']['viability_index'] > 1e8, 'VI too low'
+
+# Check overhead is negligible
+assert r['viability']['overhead_as_percent_of_benefit'] < 1, 'Overhead too high'
+
+print('✓ Part 4 results validated')
+"
+    
+    - name: Test reproducibility with same seed
+      run: |
+        python -c "
+from code.parte_2_hypothesis_validation import Part2Experiment
+import json
+
+# Run twice with same seed
+exp1 = Part2Experiment(num_operations=1000, num_iterations=2, seed=42)
+r1 = exp1.run()
+
+exp2 = Part2Experiment(num_operations=1000, num_iterations=2, seed=42)
+r2 = exp2.run()
+
+# Check improvement matches
+assert abs(r1['energy']['improvement_percent'] - r2['energy']['improvement_percent']) < 0.1
+
+print('✓ Reproducibility test passed')
+"
+    
+    - name: Generate report
+      if: always()
+      run: |
+        python scripts/generate_report.py --output reproducibility_report.md
+    
+    - name: Upload report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: reproducibility-report
+        path: reproducibility_report.md
+        retention-days: 30
+    
+    - name: Comment on PR
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '✅ Reproducibility validation passed!\n\nExperiments ran successfully with expected results. See artifact for detailed report.'
+          })

@@ -1,0 +1,6 @@
+# Semantic-Aware GPU Optimization - Python Dependencies
+# Minimal, production-grade dependencies
+
+numpy>=1.21.0
+scipy>=1.7.0
+matplotlib>=3.4.0
